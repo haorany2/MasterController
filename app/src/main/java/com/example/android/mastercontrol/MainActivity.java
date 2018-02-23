@@ -52,12 +52,10 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
     }
     Robots minion = Robots.DOC; //initial minion
     double[] gps_coords;
-    double[] obstacle_coords = {0,0}; //initial position
-    int notFound = -1;
-    double[] mannequin_coords = {notFound,notFound};
     int minion_grid_num_1, minion_grid_num_2, minion_grid_num_3; //add more for more robots
-    boolean isGridFullySearched = false;
-    boolean foundOBS, foundMANN; //implement later
+    boolean isGridFullySearched = false,
+            isObstacleFound = false,
+            isMannequinFound = false;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -67,7 +65,8 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
         //setup pixel grid
         pixelGrid = new PixelGridView(this);
 
-        pixelGrid.setMapColors(orig_map, minion, (int) gps_coords[0], (int) gps_coords[1]);
+        pixelGrid.setMapColors(orig_map, minion, (int) gps_coords[0], (int) gps_coords[1],
+                isMannequinFound);
         pixelGrid.setId(View.generateViewId());
         RelativeLayout.LayoutParams lp = new RelativeLayout.LayoutParams(700, 700);
         pixelGrid.setLayoutParams(lp);
@@ -123,78 +122,74 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
 
 /**************************************************************************************************/
     //receives info in form of string & parses to variables' appropriate types
-    void receive_from_m () {
-        String string_name = fromMinion.substring(fromMinion.indexOf("NAME"),fromMinion.indexOf("GPS")),
-                string_gps = fromMinion.substring(fromMinion.indexOf("GPS"),fromMinion.indexOf("OBS")),
-                string_obs = fromMinion.substring(fromMinion.indexOf("OBS"),fromMinion.indexOf("MANN")),
-                string_mann = fromMinion.substring(fromMinion.indexOf("MANN"),fromMinion.indexOf("SEARCH")),
-                string_search = fromMinion.substring(fromMinion.indexOf("SEARCH"),fromMinion.length());
+void receive_from_m () {
+    String string_name = fromMinion.substring(fromMinion.indexOf("NAME"),fromMinion.indexOf("GPS")),
+            string_gps = fromMinion.substring(fromMinion.indexOf("GPS"),fromMinion.indexOf("OBS")),
+            string_obs = fromMinion.substring(fromMinion.indexOf("OBS"),fromMinion.indexOf("MANN")),
+            string_mann = fromMinion.substring(fromMinion.indexOf("MANN"),fromMinion.indexOf("SEARCH")),
+            string_search = fromMinion.substring(fromMinion.indexOf("SEARCH"),fromMinion.length());
 
-        //get name of minion that sent string
-        string_name = string_name.substring(string_name.indexOf(":")+1,string_name.indexOf(",")-1);
+    //get name of minion that sent string
+    string_name = string_name.substring(string_name.indexOf(":")+2,string_name.indexOf(","));
 
-        switch (string_name) {
-            case "DOC":
-                minion = Robots.DOC;
-                break;
-            case "MR":
-                minion = Robots.MR;
-                break;
-            case "MRS":
-                minion = Robots.MRS;
-                break;
-            case "CARLITO":
-                minion = Robots.CARLITO;
-                break;
-            case "CARLOS":
-                minion = Robots.CARLOS;
-                break;
-            case "CARLY":
-                minion = Robots.CARLY;
-                break;
-            case "CARLA":
-                minion = Robots.CARLA;
-                break;
-            case "CARLETON":
-                minion = Robots.CARLETON;
-                break;
-            default:
-                Log.i("ERROR","Invalid robot name. Refer to Robot name list in code.");
-        }
-
-        //get GPS coordinates from message string
-        gps_coords = getCoords(string_gps);
-
-        //get obstacle coordinates from message string
-        if (!string_obs.contains("none")) {
-            obstacle_coords = getCoords(string_obs);
-        }
-
-        //get mannequin coordinates from message string
-        if (!string_mann.contains("none")) {
-            mannequin_coords = getCoords(string_mann);
-        }
-
-        //get search boolean
-        if (string_search.contains("true")) {
-            isGridFullySearched = true;
-        } else {
-            isGridFullySearched = false;
-        }
+    switch (string_name) {
+        case "DOC":
+            minion = Robots.DOC;
+            break;
+        case "MR":
+            minion = Robots.MR;
+            break;
+        case "MRS":
+            minion = Robots.MRS;
+            break;
+        case "CARLITO":
+            minion = Robots.CARLITO;
+            break;
+        case "CARLOS":
+            minion = Robots.CARLOS;
+            break;
+        case "CARLY":
+            minion = Robots.CARLY;
+            break;
+        case "CARLA":
+            minion = Robots.CARLA;
+            break;
+        case "CARLETON":
+            minion = Robots.CARLETON;
+            break;
+        default:
+            Log.i("ERROR","Invalid robot name. Refer to Robot name list in code.");
     }
 
-    void updateMap () {
-        if (mannequin_coords[0] == notFound) { //no mannequin found (coordinate will not = -1)
-            pixelGrid.setMapColors(orig_map, minion, (int) gps_coords[0], (int) gps_coords[1]);
-        } else { //mannequin found
-            pixelGrid.setMapColors(orig_map, minion,
-                    (int) gps_coords[0], (int) gps_coords[1],
-                    (int) mannequin_coords[0], (int) mannequin_coords[1]);
+    //get GPS coordinates from message string
+    gps_coords = getCoords(string_gps);
 
-            //reset condition test
-            mannequin_coords[0] = notFound;
-            mannequin_coords[1] = notFound;
-        }
+    //get obstacle boolean
+    if (string_obs.contains("true")) {
+        isObstacleFound = true;
+    } else {
+        isObstacleFound = false;
+    }
+
+    //get mannequin boolean
+    if (string_mann.contains("true")) {
+        isMannequinFound = true;
+    }
+    else {
+        isMannequinFound = false;
+    }
+
+    //get search boolean
+    if (string_search.contains("true")) {
+        isGridFullySearched = true;
+    } else {
+        isGridFullySearched = false;
+    }
+}
+
+    void updateMap () {
+        pixelGrid.setMapColors(orig_map, minion, (int) gps_coords[0], (int) gps_coords[1],
+                isMannequinFound);
     }
 
     //send grid # for m to search

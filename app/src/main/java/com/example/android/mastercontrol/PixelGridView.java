@@ -123,44 +123,7 @@ public class PixelGridView extends View {
         invalidate();
     }
 
-    //call when no mannequin is found
-    public void setMapColors(double[][] map, MainActivity.Robots name, int currR, int currC){
-        numRows = map.length;
-        numColumns = map[0].length;
-        gridColors = new int[numRows][numColumns];
-
-        if (name == MainActivity.Robots.DOC) {
-            gridColors[currR][currC] = 80;
-        }
-        else if (name == MainActivity.Robots.MR) {
-            gridColors[currR][currC] = 85;
-        }
-        else if (name == MainActivity.Robots.MRS) {
-            gridColors[currR][currC] = 90;
-        }
-        else if (name == MainActivity.Robots.CARLITO) {
-            gridColors[currR][currC] = 95;
-        }
-        else if (name == MainActivity.Robots.CARLOS) {
-            gridColors[currR][currC] = 100;
-        }
-        else if (name == MainActivity.Robots.CARLY) {
-            gridColors[currR][currC] = 105;
-        }
-        else if (name == MainActivity.Robots.CARLA) {
-            gridColors[currR][currC] = 110;
-        }
-        else if (name == MainActivity.Robots.CARLETON) {
-            gridColors[currR][currC] = 115;
-        } else {
-            Log.i("PixelGridView Error","Robot name not defined");
-        }
-        invalidate();
-
-    }
-
-    //call when mannequin is found
-    public void setMapColors(double[][] map, MainActivity.Robots name, int currR, int currC, int mannR, int mannC){
+    public void setMapColors(double[][] map, MainActivity.Robots name, int currR, int currC, boolean mannequinFound){
         numRows = map.length;
         numColumns = map[0].length;
         gridColors = new int[numRows][numColumns];
@@ -192,7 +155,10 @@ public class PixelGridView extends View {
         } else {
             Log.i("PixelGridView Error","Robot name not defined");
         }
-        gridColors[mannR][mannC] = 90;// <----check color!!!
+
+        if (mannequinFound) {
+            gridColors[currR][currC] = 90;// <----check color!!!
+        }
         invalidate();
     }
 }
