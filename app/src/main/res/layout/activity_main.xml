@@ -4,11 +4,6 @@ android:id="@+id/layoutPreview"
 android:layout_width="match_parent"
 android:layout_height="match_parent" >
 
-<org.opencv.android.JavaCameraView
-    android:layout_width="match_parent"
-    android:layout_height="match_parent"
-    android:id="@+id/color_blob_detection_activity_surface_view" />
-
 <Button
     android:id="@+id/btnGrid"
     android:layout_width="@dimen/command_button_size"

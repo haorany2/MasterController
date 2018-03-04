@@ -38,7 +38,7 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
     Location dest_loc;
     PixelGridView pixelGrid;
     double[][] map;
-    double [][] orig_map;
+    double [][] orig_map = new double[4][4];
     ArrayList<Location> waypoints;
     Location[][] gridLocations;
     int currRow;
@@ -51,7 +51,7 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
         DOC, MR, MRS, CARLITO, CARLOS, CARLY, CARLA, CARLETON,
     }
     Robots minion = Robots.DOC; //initial minion
-    double[] gps_coords;
+    double[] gps_coords = {0,0};
     int minion_grid_num_1, minion_grid_num_2, minion_grid_num_3; //add more for more robots
     boolean isGridFullySearched = false,
             isObstacleFound = false,
@@ -121,71 +121,73 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
     }
 
 /**************************************************************************************************/
+
+
     //receives info in form of string & parses to variables' appropriate types
-void receive_from_m () {
-    String string_name = fromMinion.substring(fromMinion.indexOf("NAME"),fromMinion.indexOf("GPS")),
-            string_gps = fromMinion.substring(fromMinion.indexOf("GPS"),fromMinion.indexOf("OBS")),
-            string_obs = fromMinion.substring(fromMinion.indexOf("OBS"),fromMinion.indexOf("MANN")),
-            string_mann = fromMinion.substring(fromMinion.indexOf("MANN"),fromMinion.indexOf("SEARCH")),
-            string_search = fromMinion.substring(fromMinion.indexOf("SEARCH"),fromMinion.length());
+    void receive_from_m () {
+        String string_name = fromMinion.substring(fromMinion.indexOf("NAME"),fromMinion.indexOf("GPS")),
+                string_gps = fromMinion.substring(fromMinion.indexOf("GPS"),fromMinion.indexOf("OBS")),
+                string_obs = fromMinion.substring(fromMinion.indexOf("OBS"),fromMinion.indexOf("MANN")),
+                string_mann = fromMinion.substring(fromMinion.indexOf("MANN"),fromMinion.indexOf("SEARCH")),
+                string_search = fromMinion.substring(fromMinion.indexOf("SEARCH"),fromMinion.length());
 
-    //get name of minion that sent string
-    string_name = string_name.substring(string_name.indexOf(":")+2,string_name.indexOf(","));
+        //get name of minion that sent string
+        string_name = string_name.substring(string_name.indexOf(":")+2,string_name.indexOf(","));
 
-    switch (string_name) {
-        case "DOC":
-            minion = Robots.DOC;
-            break;
-        case "MR":
-            minion = Robots.MR;
-            break;
-        case "MRS":
-            minion = Robots.MRS;
-            break;
-        case "CARLITO":
-            minion = Robots.CARLITO;
-            break;
-        case "CARLOS":
-            minion = Robots.CARLOS;
-            break;
-        case "CARLY":
-            minion = Robots.CARLY;
-            break;
-        case "CARLA":
-            minion = Robots.CARLA;
-            break;
-        case "CARLETON":
-            minion = Robots.CARLETON;
-            break;
-        default:
-            Log.i("ERROR","Invalid robot name. Refer to Robot name list in code.");
+        switch (string_name) {
+            case "DOC":
+                minion = Robots.DOC;
+                break;
+            case "MR":
+                minion = Robots.MR;
+                break;
+            case "MRS":
+                minion = Robots.MRS;
+                break;
+            case "CARLITO":
+                minion = Robots.CARLITO;
+                break;
+            case "CARLOS":
+                minion = Robots.CARLOS;
+                break;
+            case "CARLY":
+                minion = Robots.CARLY;
+                break;
+            case "CARLA":
+                minion = Robots.CARLA;
+                break;
+            case "CARLETON":
+                minion = Robots.CARLETON;
+                break;
+            default:
+                Log.i("ERROR","Invalid robot name. Refer to Robot name list in code.");
+        }
+
+        //get GPS coordinates from message string
+        gps_coords = getCoords(string_gps);
+
+        //get obstacle boolean
+        if (string_obs.contains("true")) {
+            isObstacleFound = true;
+        } else {
+            isObstacleFound = false;
+        }
+
+        //get mannequin boolean
+        if (string_mann.contains("true")) {
+            isMannequinFound = true;
+        }
+        else {
+            isMannequinFound = false;
+        }
+
+        //get search boolean
+        if (string_search.contains("true")) {
+            isGridFullySearched = true;
+        } else {
+            isGridFullySearched = false;
+        }
     }
-
-    //get GPS coordinates from message string
-    gps_coords = getCoords(string_gps);
-
-    //get obstacle boolean
-    if (string_obs.contains("true")) {
-        isObstacleFound = true;
-    } else {
-        isObstacleFound = false;
-    }
-
-    //get mannequin boolean
-    if (string_mann.contains("true")) {
-        isMannequinFound = true;
-    }
-    else {
-        isMannequinFound = false;
-    }
-
-    //get search boolean
-    if (string_search.contains("true")) {
-        isGridFullySearched = true;
-    } else {
-        isGridFullySearched = false;
-    }
-}
 
     void updateMap () {
         pixelGrid.setMapColors(orig_map, minion, (int) gps_coords[0], (int) gps_coords[1],
