@@ -17,6 +17,7 @@ import java.io.File;
 import java.io.FileOutputStream;
 import java.util.ArrayList;
 
+import static android.R.attr.mode;
 import static android.R.attr.name;
 
 public class MainActivity extends AppCompatActivity implements SensorEventListener {
@@ -89,6 +90,21 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
             }
         });
 
+        //add functionality to autoMode button
+        Button buttonAuto = (Button) findViewById(R.id.btnAuto);
+        buttonAuto.setOnClickListener(new View.OnClickListener() {
+            public void onClick(View v) {
+                if (!autoMode) {
+                    v.setBackgroundResource(R.drawable.button_auto_on);
+                    autoMode = true;
+                } else {
+                    v.setBackgroundResource(R.drawable.button_auto_off);
+                    autoMode = false;
+                }
+
+                Log.i("auto",""+autoMode);
+            }
+        });
     }
 
     @Override
@@ -121,8 +137,6 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
     }
 
 /**************************************************************************************************/
-
-
     //receives info in form of string & parses to variables' appropriate types
     void receive_from_m () {
         String string_name = fromMinion.substring(fromMinion.indexOf("NAME"),fromMinion.indexOf("GPS")),
@@ -167,26 +181,13 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
         gps_coords = getCoords(string_gps);
 
         //get obstacle boolean
-        if (string_obs.contains("true")) {
-            isObstacleFound = true;
-        } else {
-            isObstacleFound = false;
-        }
+        isObstacleFound = string_obs.contains("true");
 
         //get mannequin boolean
-        if (string_mann.contains("true")) {
-            isMannequinFound = true;
-        }
-        else {
-            isMannequinFound = false;
-        }
+        isMannequinFound = string_mann.contains("true");
 
         //get search boolean
-        if (string_search.contains("true")) {
-            isGridFullySearched = true;
-        } else {
-            isGridFullySearched = false;
-        }
+        isGridFullySearched = string_search.contains("true");
     }
 
     void updateMap () {
@@ -196,7 +197,7 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
 
     //send grid # for m to search
     void send_to_m (int current_grid_number) {
-        toMinion = "" + current_grid_number;
+        toMinion = "AUTOMODE: " + mode + ", GRID: " + current_grid_number;
 
         //actually send info here
     }
