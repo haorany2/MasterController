@@ -68,7 +68,6 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
     double[] gps_coords;    //initialize minion gps
 
     boolean initialFieldScan = true,
-            isObstacleFound = false,
             isMannequinFound = false;
 
     double[] destinationLoc = new double[2];
@@ -180,8 +179,7 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
     //receives info in form of string & parses to variables' appropriate types
     void receive_from_m () {
         String string_name = fromMinion.substring(fromMinion.indexOf("NAME"),fromMinion.indexOf("GPS")),
-                string_gps = fromMinion.substring(fromMinion.indexOf("GPS"),fromMinion.indexOf("OBS")),
-                string_obs = fromMinion.substring(fromMinion.indexOf("OBS"),fromMinion.indexOf("MANN")),
+                string_gps = fromMinion.substring(fromMinion.indexOf("GPS"),fromMinion.indexOf("MANN")),
                 string_mann = fromMinion.substring(fromMinion.indexOf("MANN"),fromMinion.indexOf("SEARCH")),
                 string_search = fromMinion.substring(fromMinion.indexOf("SEARCH"),fromMinion.indexOf("LIDAR")),
                 string_lidar = fromMinion.substring(fromMinion.indexOf("LIDAR"),fromMinion.indexOf("LGPS")),
@@ -189,9 +187,6 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
 
         //get GPS coordinates from message string
         gps_coords = getCoords(string_gps);
-
-        //get obstacle boolean
-        isObstacleFound = string_obs.contains("true");
 
         //get mannequin boolean
         isMannequinFound = string_mann.contains("true");
@@ -201,48 +196,43 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
 
         switch (string_name) {
             case "DOC":
+                minion = Robots.DOC;
                 robot = doc;
-                doc.setLocation(gps_coords);
-                doc.setStatus(isMannequinFound);
                 break;
             case "MR":
+                minion = Robots.MR;
                 robot = mr;
-                mr.setLocation(gps_coords);
-                mr.setStatus(isMannequinFound);
                 break;
             case "MRS":
-               robot = mrs;
-                mrs.setLocation(gps_coords);
-                mrs.setStatus(isMannequinFound);
+                minion = Robots.MRS;
+                robot = mrs;
                 break;
             case "CARLITO":
-               robot = carlito;
-                carlito.setLocation(gps_coords);
-                carlito.setStatus(isMannequinFound);
+                minion = Robots.CARLITO;
+                robot = carlito;
                 break;
             case "CARLOS":
-               robot = carlos;
-                carlos.setLocation(gps_coords);
-                carlos.setStatus(isMannequinFound);
+                minion = Robots.CARLOS;
+                robot = carlos;
                 break;
             case "CARLY":
+                minion = Robots.CARLY;
                 robot = carly;
-                carly.setLocation(gps_coords);
-                carly.setStatus(isMannequinFound);
                 break;
             case "CARLA":
-               robot = carla;
-                carla.setLocation(gps_coords);
-                carla.setStatus(isMannequinFound);
+                minion = Robots.CARLA;
+                robot = carla;
                 break;
             case "CARLETON":
+                minion = Robots.CARLETON;
                 robot = carleton;
-                carleton.setLocation(gps_coords);
-                carleton.setStatus(isMannequinFound);
                 break;
             default:
                 Log.i("ERROR","Invalid robot name. Refer to Robot name list in code.");
         }
+
+        robot.setLocation(gps_coords);
+        robot.setStatus(isMannequinFound);
 
         /*
         //get LIDAR boolean
