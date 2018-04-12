@@ -12,13 +12,25 @@ import android.view.View;
 import android.widget.Button;
 import android.widget.LinearLayout;
 import android.widget.RelativeLayout;
+import android.widget.TextView;
 
 import java.io.File;
 import java.io.FileOutputStream;
 import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.LinkedList;
 
+import static android.R.attr.min;
 import static android.R.attr.mode;
 import static android.R.attr.name;
+import static com.example.android.mastercontrol.MainActivity.Robots.CARLA;
+import static com.example.android.mastercontrol.MainActivity.Robots.CARLETON;
+import static com.example.android.mastercontrol.MainActivity.Robots.CARLITO;
+import static com.example.android.mastercontrol.MainActivity.Robots.CARLOS;
+import static com.example.android.mastercontrol.MainActivity.Robots.CARLY;
+import static com.example.android.mastercontrol.MainActivity.Robots.DOC;
+import static com.example.android.mastercontrol.MainActivity.Robots.MR;
+import static com.example.android.mastercontrol.MainActivity.Robots.MRS;
 
 public class MainActivity extends AppCompatActivity implements SensorEventListener {
 
@@ -37,7 +49,6 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
     FileOutputStream fosRR;
     Boolean logging;
     Location dest_loc;
-    PixelGridView pixelGrid;
     double[][] map;
     double [][] orig_map = new double[4][4];
     ArrayList<Location> waypoints;
@@ -45,50 +56,57 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
     int currRow;
     int currCol;
 
+    String TAG1 = "MASTER";
+
     //Master variables
     String fromMinion = "", //strings received from WiFi router
             toMinion = "";  //strings to send through WiFi router
     enum Robots {
         DOC, MR, MRS, CARLITO, CARLOS, CARLY, CARLA, CARLETON,
     }
-    Robots minion = Robots.DOC; //initial minion
-    double[] gps_coords = {0,0};
-    int minion_grid_num_1, minion_grid_num_2, minion_grid_num_3; //add more for more robots
-    boolean isGridFullySearched = false,
+    Robots minion; //initialize minion
+    double[] gps_coords;    //initialize minion gps
+
+    boolean initialFieldScan = true,
             isObstacleFound = false,
             isMannequinFound = false;
+
+    double[] destinationLoc = new double[2];
+
+    double[][] gpsList = new double[25][2];
+    double[][] searchingList = new double[25][2];
+    double[][] confirmedList = new double[25][2];
+
+
+
+
+
+    int gpsListCounter = 0;
+    String gpsListString = "";
+    String confirmedString = "";
+
+
+    Robot doc = new Robot(DOC, gps_coords, true);
+    Robot mr = new Robot(MR, gps_coords, true);
+    Robot mrs = new Robot(MRS, gps_coords, true);
+    Robot carlito = new Robot(CARLITO, gps_coords, true);
+    Robot carlos = new Robot(CARLOS, gps_coords, false);
+    Robot carly = new Robot(CARLY, gps_coords, false);
+    Robot carla = new Robot(CARLA, gps_coords, false);
+    Robot carleton = new Robot(CARLETON, gps_coords, false);
+
+    Robot robot;
+
+    LinkedList<Robot> free_robots=new LinkedList<>();
+
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
 
-        //setup pixel grid
-        pixelGrid = new PixelGridView(this);
 
-        pixelGrid.setMapColors(orig_map, minion, (int) gps_coords[0], (int) gps_coords[1],
-                isMannequinFound);
-        pixelGrid.setId(View.generateViewId());
         RelativeLayout.LayoutParams lp = new RelativeLayout.LayoutParams(700, 700);
-        pixelGrid.setLayoutParams(lp);
-
-        ((LinearLayout) findViewById(R.id.leftll)).addView(pixelGrid);
-
-        //add functionality to gridMode button
-        Button buttonGrid = (Button) findViewById(R.id.btnGrid);
-        buttonGrid.setOnClickListener(new View.OnClickListener() {
-            public void onClick(View v) {
-                if (!gridMode) {
-                    v.setBackgroundResource(R.drawable.button_grid_on);
-                    gridMode = true;
-                    pixelGrid.setVisibility(View.VISIBLE);
-                } else {
-                    v.setBackgroundResource(R.drawable.button_grid_off);
-                    gridMode = false;
-                    pixelGrid.setVisibility(View.INVISIBLE);
-                }
-            }
-        });
 
         //add functionality to autoMode button
         Button buttonAuto = (Button) findViewById(R.id.btnAuto);
@@ -105,6 +123,15 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
                 Log.i("auto",""+autoMode);
             }
         });
+
+        free_robots.add(doc);
+        free_robots.add(mr);
+        free_robots.add(mrs);
+        free_robots.add(carlito);
+        free_robots.add(carlos);
+        free_robots.add(carly);
+        free_robots.add(carla);
+        free_robots.add(carleton);
     }
 
     @Override
@@ -125,17 +152,30 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
             mGeo = event.values;
 
 
-        receive_from_m();
-        updateMap();
 
-        if (isGridFullySearched) {
-            //give new grid number
+        receive_from_m();
+        Robot assign_mission;
+        while(!free_robots.isEmpty()){
+            assign_mission=free_robots.pop();
+            assign_mission.isSearching=true;
+            setClosestObjectDistance(assign_mission);
 
         }
 
-        send_to_m(minion_grid_num_1);
+
+        updateDisplay();
+
     }
 
+    private void displayMessageToList(String message) {
+        TextView oderSummaryTextView = (TextView) findViewById(R.id.gps_string_tv);
+        oderSummaryTextView.setText(message);
+    }
+
+    private void displayMessageToConfirmedList(String message) {
+        TextView oderSummaryTextView = (TextView) findViewById(R.id.gps_string_tv);
+        oderSummaryTextView.setText(message);
+    }
 /**************************************************************************************************/
     //receives info in form of string & parses to variables' appropriate types
     void receive_from_m () {
@@ -143,39 +183,9 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
                 string_gps = fromMinion.substring(fromMinion.indexOf("GPS"),fromMinion.indexOf("OBS")),
                 string_obs = fromMinion.substring(fromMinion.indexOf("OBS"),fromMinion.indexOf("MANN")),
                 string_mann = fromMinion.substring(fromMinion.indexOf("MANN"),fromMinion.indexOf("SEARCH")),
-                string_search = fromMinion.substring(fromMinion.indexOf("SEARCH"),fromMinion.length());
-
-        //get name of minion that sent string
-        string_name = string_name.substring(string_name.indexOf(":")+2,string_name.indexOf(","));
-
-        switch (string_name) {
-            case "DOC":
-                minion = Robots.DOC;
-                break;
-            case "MR":
-                minion = Robots.MR;
-                break;
-            case "MRS":
-                minion = Robots.MRS;
-                break;
-            case "CARLITO":
-                minion = Robots.CARLITO;
-                break;
-            case "CARLOS":
-                minion = Robots.CARLOS;
-                break;
-            case "CARLY":
-                minion = Robots.CARLY;
-                break;
-            case "CARLA":
-                minion = Robots.CARLA;
-                break;
-            case "CARLETON":
-                minion = Robots.CARLETON;
-                break;
-            default:
-                Log.i("ERROR","Invalid robot name. Refer to Robot name list in code.");
-        }
+                string_search = fromMinion.substring(fromMinion.indexOf("SEARCH"),fromMinion.indexOf("LIDAR")),
+                string_lidar = fromMinion.substring(fromMinion.indexOf("LIDAR"),fromMinion.indexOf("LGPS")),
+                string_lidarGPS = fromMinion.substring(fromMinion.indexOf("LGPS"),fromMinion.length());
 
         //get GPS coordinates from message string
         gps_coords = getCoords(string_gps);
@@ -186,13 +196,102 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
         //get mannequin boolean
         isMannequinFound = string_mann.contains("true");
 
-        //get search boolean
-        isGridFullySearched = string_search.contains("true");
+        //get name of minion that sent string
+        string_name = string_name.substring(string_name.indexOf(":")+2,string_name.indexOf(","));
+
+        switch (string_name) {
+            case "DOC":
+                robot = doc;
+                doc.setLocation(gps_coords);
+                doc.setStatus(isMannequinFound);
+                break;
+            case "MR":
+                robot = mr;
+                mr.setLocation(gps_coords);
+                mr.setStatus(isMannequinFound);
+                break;
+            case "MRS":
+               robot = mrs;
+                mrs.setLocation(gps_coords);
+                mrs.setStatus(isMannequinFound);
+                break;
+            case "CARLITO":
+               robot = carlito;
+                carlito.setLocation(gps_coords);
+                carlito.setStatus(isMannequinFound);
+                break;
+            case "CARLOS":
+               robot = carlos;
+                carlos.setLocation(gps_coords);
+                carlos.setStatus(isMannequinFound);
+                break;
+            case "CARLY":
+                robot = carly;
+                carly.setLocation(gps_coords);
+                carly.setStatus(isMannequinFound);
+                break;
+            case "CARLA":
+               robot = carla;
+                carla.setLocation(gps_coords);
+                carla.setStatus(isMannequinFound);
+                break;
+            case "CARLETON":
+                robot = carleton;
+                carleton.setLocation(gps_coords);
+                carleton.setStatus(isMannequinFound);
+                break;
+            default:
+                Log.i("ERROR","Invalid robot name. Refer to Robot name list in code.");
+        }
+
+        /*
+        //get LIDAR boolean
+        hasLIDAR = string_lidar.contains("true");
+
+        //add LIDAR gps calculation of victim to list of gps coordinates
+        if (hasLIDAR) {
+            if (gpsListCounter < gpsList[0].length) {
+                gpsList[gpsListCounter] = getCoords(string_lidarGPS);
+                gpsListCounter++;
+            } else {
+                Log.i(TAG1,"gpsList is full!");
+            }
+        }
+
+        */
     }
 
-    void updateMap () {
-        pixelGrid.setMapColors(orig_map, minion, (int) gps_coords[0], (int) gps_coords[1],
-                isMannequinFound);
+    void updateDisplay () {
+        if (initialFieldScan) {
+            // update GPS locations list string
+            for (int i=0; i<gpsList[0].length; i++) {
+                gpsListString = gpsListString + "[LAT:" + gpsList[0] + ", LON:" + gpsList[1] + "] \n";
+            }
+
+            displayMessageToList(gpsListString);
+        } else {
+            if (isMannequinFound) {
+                // match GPS coords that were found w/ coords on the list
+                for (int i=0; i<gpsList[0].length; i++) {
+                    if (gpsList[i][0] == gps_coords[0] && gpsList[i][1] == gps_coords[1]) {
+                        // add GPS coords to confirmed list
+                        confirmedList[i][0] = gpsList[i][0];
+                        confirmedList[i][1] = gpsList[i][1];
+
+                        // erase GPS coords from unconfirmed list
+                        gpsList[i][0] = 0;
+                        gpsList[i][1] = 0;
+                    }
+                }
+
+                // update confirmed String
+                for (int i=0; i<confirmedList[0].length; i++) {
+                    confirmedString = confirmedString + "[LAT:" + confirmedList[0] + ", LON:" + confirmedList[1] + "] \n";
+                }
+
+                displayMessageToConfirmedList(confirmedString);
+            }
+        }
     }
 
     //send grid # for m to search
@@ -200,6 +299,29 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
         toMinion = "AUTOMODE: " + mode + ", GRID: " + current_grid_number;
 
         //actually send info here
+    }
+
+    void setClosestObjectDistance(Robot name) {
+        double[] minLoc = new double[2];
+        double min = 0;
+
+        // Calculate distances of objects from robot's current location
+        for (int i=0; i<25; i++) {
+            if(distanceFormula(name.getRobotLocation(),gpsList[i]) < min){
+                min = distanceFormula(name.getRobotLocation(),gpsList[i]);
+                minLoc = gpsList[i];
+            }
+        }
+
+        name.setDestination(minLoc);
+        if(Arrays.asList(gpsList).contains(minLoc)){
+            gpsList.ind
+        }
+        gpsList.
+    }
+
+    double distanceFormula(double[] gps1, double[] gps2) {
+        return Math.sqrt((gps2[0]-gps1[0])*(gps2[0]-gps1[0]) - (gps2[1]-gps1[1])*(gps2[1]-gps1[1]) );
     }
 
     double[] getCoords (String str) {
@@ -227,4 +349,53 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
         return coords;
     }
 
+    class Robot {
+        Robots name;
+        double[] location = new double[2];
+        boolean isMannequinFound = false;
+        boolean isSearching = false;
+        boolean hasLidar = false;
+        double[] destination = new double[2];
+
+        public Robot(Robots name, double[] location, boolean hasLidar) {
+            this.name = name;
+            this.location = location;
+            this.hasLidar = hasLidar;
+        }
+
+        public Robots getName () {
+            return name;
+        }
+
+        public double[] getRobotLocation() {
+            return location;
+        }
+
+        public void setLocation (double[] location) {
+            this.location = location;
+        }
+
+        public void setDestination (double[] destination) {
+            this.destination = destination;
+            this.isSearching = true;
+        }
+
+        void setStatus(boolean isMannequinFound) {
+            this.isMannequinFound = isMannequinFound;
+
+            if (isMannequinFound) {
+                this.isSearching = false;
+            }
+        }
+
+        public boolean getStatus() {
+            return this.isMannequinFound;
+        }
+
+        public boolean getIsSearching() {
+            return this.isSearching;
+        }
+    }
+
 }
+

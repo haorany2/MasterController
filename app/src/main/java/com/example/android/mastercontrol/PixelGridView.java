@@ -161,4 +161,14 @@ public class PixelGridView extends View {
         }
         invalidate();
     }
+
+    public void initializeMapwLocations(double[][] map, int lat, int lon, boolean mannequinFound){
+        numRows = map.length;
+        numColumns = map[0].length;
+        gridColors = new int[numRows][numColumns];
+
+        gridColors[lat][lon] = 115;
+
+        invalidate();
+    }
 }
